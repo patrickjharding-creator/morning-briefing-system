@@ -160,6 +160,17 @@ export interface NewsBullet {
   source: string
 }
 
+// ─── Gmail classification ─────────────────────────────────────────────────────
+
+export interface ClassifiedThread {
+  thread_id: string
+  subject: string
+  sender: string
+  action_needed: boolean
+  summary: string
+  messages: NormalisedMessage[]
+}
+
 // ─── Assembled briefing ──────────────────────────────────────────────────────
 
 export interface BriefingData {
