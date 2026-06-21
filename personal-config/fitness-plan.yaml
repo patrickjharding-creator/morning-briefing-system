@@ -1,0 +1,120 @@
+# Fitness Plan — June/July 2026
+# Block: Gold Coast Marathon Taper
+# Last updated: 2026-06-21
+
+athlete:
+  name: Pat
+  # Fill in when known — used for zone-based session descriptions in future blocks
+  lthr_run: null
+  threshold_pace: null
+  ftp_cycling: null
+  swim_css: null
+
+current_block:
+  name: Gold Coast Marathon — Taper
+  phase: taper
+  start: "2026-06-22"
+  end: "2026-07-05"
+  goal_race:
+    name: Gold Coast Marathon
+    date: "2026-07-05"
+    priority: A
+    discipline: run
+    goal: finish
+    notes: "Injury-affected build. Goal is completion, not time. Keep all sessions conservative."
+
+weekly_template:
+  monday: run
+  tuesday: run
+  wednesday: run
+  thursday: rest
+  friday: swim
+  saturday: run
+  sunday: ride
+
+weeks:
+  - week: 1
+    label: "Taper Week 1"
+    start: "2026-06-22"
+    sessions:
+      monday:
+        discipline: run
+        type: easy
+        duration_min: 40
+        rpe: 4
+        notes: "Easy aerobic run. Conversational pace throughout. No pressure."
+      tuesday:
+        discipline: run
+        type: easy_with_strides
+        duration_min: 45
+        rpe: 4
+        notes: "Easy run with 4x20s light strides in the last 10 min. Keep legs turning over."
+      wednesday:
+        discipline: run
+        type: easy
+        duration_min: 35
+        rpe: 3
+        notes: "Short easy recovery run. Back off if anything feels off."
+      thursday:
+        discipline: rest
+      friday:
+        discipline: swim
+        type: aerobic
+        distance_m: 1500
+        rpe: 4
+        notes: "Steady aerobic swim. Mix of drills and continuous. No hard efforts."
+      saturday:
+        discipline: run
+        type: moderate_long
+        distance_km: 18
+        rpe: 5
+        notes: "Last meaningful long run. Easy to moderate effort. Practice race morning nutrition and gear."
+      sunday:
+        discipline: cycling
+        type: easy
+        duration_min: 75
+        rpe: 3
+        notes: "Easy spin. HR in lower aerobic zone. Active recovery."
+
+  - week: 2
+    label: "Race Week"
+    start: "2026-06-29"
+    sessions:
+      monday:
+        discipline: run
+        type: easy
+        duration_min: 30
+        rpe: 3
+        notes: "Easy shakeout. Legs should be feeling fresher. Relax."
+      tuesday:
+        discipline: run
+        type: easy_with_strides
+        duration_min: 35
+        rpe: 4
+        notes: "Easy run with 4x20s strides. Keep sharp without accumulating fatigue."
+      wednesday:
+        discipline: run
+        type: easy
+        duration_min: 25
+        rpe: 3
+        notes: "Short and easy. Just keep the legs moving."
+      thursday:
+        discipline: rest
+      friday:
+        discipline: swim
+        type: easy
+        distance_m: 1000
+        rpe: 3
+        notes: "Short easy swim. Loosen up, no effort."
+      saturday:
+        discipline: run
+        type: shakeout
+        distance_km: 4
+        rpe: 2
+        notes: "Pre-race shakeout. Very easy. Confirm shoes, gear, and nutrition are ready. Early night."
+      sunday:
+        discipline: run
+        type: race
+        name: "Gold Coast Marathon"
+        distance_km: 42.195
+        notes: "Race day. Injury-affected prep — the goal is the finish line. Run easy in the first half. Walk if needed. Enjoy it."

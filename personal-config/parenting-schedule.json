@@ -1,0 +1,76 @@
+{
+  "children": [
+    { "name": "Penny", "age": 5, "type": "school" },
+    { "name": "Philippa", "age": 1, "type": "daycare" }
+  ],
+  "parties": {
+    "pat": { "display_name": "Pat" },
+    "pam": { "display_name": "Pam" },
+    "sophie": {
+      "display_name": "Sophie",
+      "role": "babysitter",
+      "arrives": "16:00",
+      "days": ["monday"],
+      "duties": ["pickup_penny", "pickup_philippa", "dog_walk", "dog_feeding", "philippa_dinner"]
+    }
+  },
+  "periods": {
+    "morning": {
+      "time_start": "06:00",
+      "time_end": "08:30",
+      "duties": ["breakfast", "drop_off", "pack_lunch"]
+    },
+    "afternoon": {
+      "time_start": "16:30",
+      "time_end": "18:30",
+      "duties": ["pick_up", "supervision", "dinner", "dishes"]
+    },
+    "evening": {
+      "time_start": "18:30",
+      "time_end": "20:30",
+      "duties": ["bath", "bedtime"]
+    },
+    "night": {
+      "time_start": "21:30",
+      "time_end": "06:00",
+      "duties": ["settle"]
+    }
+  },
+  "weekly_pattern": {
+    "monday":    { "morning": "pam", "afternoon": "sophie", "evening": "pat", "night": "pat" },
+    "tuesday":   { "morning": "pam", "afternoon": "pat",    "evening": "pat", "night": "pam" },
+    "wednesday": { "morning": "pat", "afternoon": "pam",    "evening": "pam", "night": "pat" },
+    "thursday":  { "morning": "pat", "afternoon": "pat",    "evening": "pat", "night": "pam" },
+    "friday":    { "morning": "pam", "afternoon": "pam",    "evening": "pam", "night": "pam" },
+    "saturday":  { "morning": "pam", "afternoon": "pat",    "evening": "pat", "night": "pat" },
+    "sunday":    { "morning": "pat", "afternoon": "pat",    "evening": "pam", "night": "pam" }
+  },
+  "exceptions": [],
+  "school_holidays": [
+    {
+      "start": "2026-01-01",
+      "end": "2026-01-26",
+      "note": "Summer holidays — before Term 1"
+    },
+    {
+      "start": "2026-04-03",
+      "end": "2026-04-19",
+      "note": "Autumn holidays — between Terms 1 and 2"
+    },
+    {
+      "start": "2026-07-04",
+      "end": "2026-07-19",
+      "note": "Winter holidays — between Terms 2 and 3"
+    },
+    {
+      "start": "2026-09-26",
+      "end": "2026-10-11",
+      "note": "Spring holidays — between Terms 3 and 4"
+    },
+    {
+      "start": "2026-12-18",
+      "end": "2026-12-31",
+      "note": "Summer holidays — after Term 4"
+    }
+  ]
+}

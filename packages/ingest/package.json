@@ -1,0 +1,24 @@
+{
+  "name": "@morning-briefing/ingest",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@morning-briefing/shared": "*",
+    "@aws-sdk/client-s3": "^3.0.0",
+    "@aws-sdk/client-secrets-manager": "^3.0.0",
+    "axios": "^1.7.0",
+    "tsdav": "^2.0.0",
+    "js-yaml": "^4.1.0",
+    "garmin-connect": "^1.5.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0"
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "owner": {
+    "name": "Pat",
+    "email": "patrick.j.harding@gmail.com",
+    "timezone": "Australia/Sydney"
+  },
+  "location": {
+    "name": "Surry Hills, Sydney",
+    "lat": -33.8885,
+    "lon": 151.2099,
+    "timezone": "Australia/Sydney"
+  },
+  "weather": {
+    "provider": "openweathermap",
+    "advisory_rules": {
+      "rain_threshold_mm": 2,
+      "heat_threshold_celsius": 28,
+      "wind_threshold_kmh": 30,
+      "training_window_start": "06:00",
+      "training_window_end": "09:00"
+    }
+  },
+  "calendar": {
+    "provider": "icloud",
+    "caldav_url": "https://caldav.icloud.com",
+    "apple_id": "patrick.j.harding@gmail.com",
+    "birthdays_in_calendar": true,
+    "note": "Credentials (app-specific password) stored in Secrets Manager as ICLOUD_APP_PASSWORD"
+  },
+  "garmin": {
+    "user_id": "de9ced08-7ac9-4aa9-8bfd-84b95626149b",
+    "goals": {
+      "weight_kg": 90,
+      "sleep_hours": 7
+    }
+  },
+  "messaging": {
+    "sources": {
+      "gmail": {
+        "enabled": true,
+        "address": "patrick.j.harding@gmail.com"
+      },
+      "imessage": { "enabled": false, "note": "Requires Mac daemon — v2" },
+      "whatsapp": { "enabled": false, "note": "Requires Mac daemon + ToS review — v3" },
+      "messenger": { "enabled": false, "note": "Requires Mac daemon + ToS review — v3" }
+    },
+    "filters": {
+      "exclude_automated": true,
+      "exclude_group_chats": false,
+      "min_message_length": 10,
+      "lookback_hours": 24
+    }
+  },
+  "news": {
+    "topic_buckets": ["World", "Australia", "Technology", "Science", "Business"],
+    "trusted_sources": ["Reuters", "AP", "BBC", "The Guardian", "ABC Australia", "SMH", "FT"],
+    "max_age_hours": 24,
+    "max_words_per_bullet": 25
+  },
+  "smart_dates": {
+    "birthday_advance_warning_days": 7,
+    "race_warning_weeks": [8, 4, 2, 1],
+    "plan_expiry_warning_days": 7
+  },
+  "races": {
+    "source": "calendar",
+    "note": "Race events are read from Apple Calendar at runtime. The ingest Lambda identifies them by calendar name or event title keyword — see race_detection below.",
+    "race_detection": {
+      "calendar_name": "Races",
+      "fallback_title_keywords": ["marathon", "triathlon", "gran fondo", "race", "ironman"]
+    }
+  }
+}
