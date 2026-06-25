@@ -1,15 +1,18 @@
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager'
+import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda'
 import type { BriefingData } from '@morning-briefing/shared'
 import { fetchWeather } from './weather'
 import { fetchCalendarData } from './calendar'
 import { fetchGarminData } from './garmin'
+import { fetchReminders } from './reminders'
 import { buildParentingData } from './parenting'
 import { parseFitnessPlan } from './fitness-plan'
 import { buildRaceCountdown } from './smart-dates'
 
 const s3 = new S3Client({ region: process.env.AWS_REGION ?? 'ap-southeast-2' })
 const sm = new SecretsManagerClient({ region: process.env.AWS_REGION ?? 'ap-southeast-2' })
+const lambdaClient = new LambdaClient({ region: process.env.AWS_REGION ?? 'ap-southeast-2' })
 
 const BUCKET = process.env.S3_BUCKET!
 const CONFIG_BUCKET = process.env.CONFIG_BUCKET ?? BUCKET
@@ -25,11 +28,17 @@ async function getS3Text(key: string): Promise<string> {
   return await res.Body!.transformToString()
 }
 
-export async function handler(): Promise<void> {
-  const today = new Date()
-  const dateStr = today.toISOString().slice(0, 10)
+interface IngestEvent {
+  skipGarmin?: boolean
+}
 
-  console.log(`Ingest Lambda running for ${dateStr}`)
+export async function handler(event: IngestEvent = {}): Promise<void> {
+  const today = new Date()
+  // Use Sydney local date — Lambda runs at 7am Sydney = 9pm UTC previous day
+  const dateStr = today.toLocaleDateString('en-CA')
+  const skipGarmin = event.skipGarmin === true
+
+  console.log(`Ingest Lambda running for ${dateStr}${skipGarmin ? ' [skipGarmin]' : ''}`)
 
   // ── Secrets ──────────────────────────────────────────────────────────────
 
@@ -65,7 +74,7 @@ export async function handler(): Promise<void> {
 
   // ── Fetch all data sources in parallel ───────────────────────────────────
 
-  const [weatherResult, calendarResult, garminResult] = await Promise.allSettled([
+  const [weatherResult, calendarResult, garminResult, remindersResult] = await Promise.allSettled([
     fetchWeather(owmApiKey, {
       lat: briefingConfig.location.lat,
       lon: briefingConfig.location.lon,
@@ -79,12 +88,18 @@ export async function handler(): Promise<void> {
       race_detection: briefingConfig.calendar.race_detection,
       smart_dates: { race_warning_weeks: briefingConfig.smart_dates.race_warning_weeks },
     }, today),
-    fetchGarminData(garminCredentials, today),
+    skipGarmin ? Promise.resolve(null) : fetchGarminData(garminCredentials, today),
+    fetchReminders({
+      caldav_url: briefingConfig.calendar.caldav_url,
+      apple_id: briefingConfig.calendar.apple_id,
+      password: icloudPassword,
+    }, today),
   ])
 
   if (weatherResult.status === 'rejected') console.error('Weather fetch failed:', weatherResult.reason)
   if (calendarResult.status === 'rejected') console.error('Calendar fetch failed:', calendarResult.reason)
   if (garminResult.status === 'rejected') console.error('Garmin fetch failed:', garminResult.reason)
+  if (remindersResult.status === 'rejected') console.error('Reminders fetch failed:', remindersResult.reason)
 
   const weather = weatherResult.status === 'fulfilled' ? weatherResult.value : {
     periods: [], advisory: null, fetched_at: new Date().toISOString()
@@ -94,6 +109,7 @@ export async function handler(): Promise<void> {
     calendarResult.status === 'fulfilled' ? calendarResult.value : {}
 
   const garmin = garminResult.status === 'fulfilled' ? garminResult.value : null
+  const reminders = remindersResult.status === 'fulfilled' ? remindersResult.value : []
 
   // ── Parenting ─────────────────────────────────────────────────────────────
 
@@ -121,7 +137,7 @@ export async function handler(): Promise<void> {
     birthdays,
     race: nextRace,
     parenting,
-    reminders: [],               // TODO: Apple Reminders via iCloud CalDAV (VTODO)
+    reminders,
     suggested_actions: [],       // Synthesis Lambda
     drafts: [],                  // Synthesis Lambda
     fitness: {
@@ -159,4 +175,32 @@ export async function handler(): Promise<void> {
   }))
 
   console.log(`Ingest complete — written to s3://${BUCKET}/ingest/${dateStr}.json`)
+
+  // ── Invoke Gmail Lambda (synchronous — must complete before synthesis) ────
+
+  const gmailArn = process.env.GMAIL_LAMBDA_ARN!
+  console.log('Invoking Gmail Lambda...')
+  const gmailResult = await lambdaClient.send(new InvokeCommand({
+    FunctionName: gmailArn,
+    InvocationType: 'RequestResponse',
+  }))
+  if (gmailResult.FunctionError) {
+    const errPayload = gmailResult.Payload ? Buffer.from(gmailResult.Payload).toString() : 'unknown'
+    throw new Error(`Gmail Lambda failed: ${errPayload}`)
+  }
+  console.log('Gmail Lambda completed')
+
+  // ── Invoke Synthesis Lambda ───────────────────────────────────────────────
+
+  const synthesisArn = process.env.SYNTHESIS_LAMBDA_ARN!
+  console.log('Invoking Synthesis Lambda...')
+  const synthesisResult = await lambdaClient.send(new InvokeCommand({
+    FunctionName: synthesisArn,
+    InvocationType: 'RequestResponse',
+  }))
+  if (synthesisResult.FunctionError) {
+    const errPayload = synthesisResult.Payload ? Buffer.from(synthesisResult.Payload).toString() : 'unknown'
+    throw new Error(`Synthesis Lambda failed: ${errPayload}`)
+  }
+  console.log('Synthesis Lambda completed')
 }

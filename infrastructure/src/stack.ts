@@ -1,11 +1,10 @@
 import * as cdk from 'aws-cdk-lib'
 import * as s3 from 'aws-cdk-lib/aws-s3'
 import * as lambda from 'aws-cdk-lib/aws-lambda'
-import * as events from 'aws-cdk-lib/aws-events'
-import * as targets from 'aws-cdk-lib/aws-events-targets'
+import { NodejsFunction, NodejsFunctionProps } from 'aws-cdk-lib/aws-lambda-nodejs'
+import * as scheduler from 'aws-cdk-lib/aws-scheduler'
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb'
 import * as apigateway from 'aws-cdk-lib/aws-apigateway'
-import * as ses from 'aws-cdk-lib/aws-ses'
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager'
 import * as iam from 'aws-cdk-lib/aws-iam'
 import { Construct } from 'constructs'
@@ -55,47 +54,52 @@ export class MorningBriefingStack extends cdk.Stack {
       S3_BUCKET: bucket.bucketName,
       DRAFTS_TABLE: draftsTable.tableName,
       NODE_OPTIONS: '--enable-source-maps',
+      TZ: 'Australia/Sydney',
     }
 
     // ── Lambda defaults ───────────────────────────────────────────────────────
 
     // Helper to build Lambda from a package
-    const makeLambda = (id: string, pkg: string, handler = 'index.handler', overrides: Partial<lambda.FunctionProps> = {}) =>
-      new lambda.Function(this, id, {
+    const makeLambda = (id: string, pkg: string, entryFile = 'index.ts', overrides: Partial<NodejsFunctionProps> = {}) =>
+      new NodejsFunction(this, id, {
         runtime: lambda.Runtime.NODEJS_20_X,
         architecture: lambda.Architecture.ARM_64,
         memorySize: 512,
         timeout: cdk.Duration.minutes(5),
         environment: sharedEnv,
         functionName: `morning-briefing-${pkg}`,
-        code: lambda.Code.fromAsset(path.join(__dirname, `../../packages/${pkg}/dist`)),
-        handler,
+        entry: path.join(__dirname, `../../packages/${pkg}/src/${entryFile}`),
+        handler: 'handler',
+        bundling: {
+          externalModules: ['@aws-sdk/*'],
+          sourceMap: true,
+        },
         ...overrides,
       })
 
     // ── Lambda functions ──────────────────────────────────────────────────────
 
-    const ingestFn = makeLambda('IngestLambda', 'ingest', 'index.handler', {
+    const ingestFn = makeLambda('IngestLambda', 'ingest', 'index.ts', {
       timeout: cdk.Duration.minutes(10),
       memorySize: 1024,
     })
 
-    const gmailFn = makeLambda('GmailLambda', 'gmail', 'index.handler', {
+    const gmailFn = makeLambda('GmailLambda', 'gmail', 'index.ts', {
       timeout: cdk.Duration.minutes(10),
     })
 
-    const synthesisFn = makeLambda('SynthesisLambda', 'synthesis', 'index.handler', {
+    const synthesisFn = makeLambda('SynthesisLambda', 'synthesis', 'index.ts', {
       timeout: cdk.Duration.minutes(10),
       memorySize: 1024,
     })
 
-    const newsFn = makeLambda('NewsLambda', 'news', 'index.handler', {
+    const newsFn = makeLambda('NewsLambda', 'news', 'index.ts', {
       timeout: cdk.Duration.minutes(15),  // Batch API polling
     })
 
-    const emailBuilderFn = makeLambda('EmailBuilderLambda', 'email-builder', 'index.handler')
+    const emailBuilderFn = makeLambda('EmailBuilderLambda', 'email-builder', 'handler.ts')
 
-    const approvalFn = makeLambda('ApprovalLambda', 'approval-api', 'index.handler', {
+    const approvalFn = makeLambda('ApprovalLambda', 'approval-api', 'index.ts', {
       timeout: cdk.Duration.seconds(30),
     })
 
@@ -134,23 +138,38 @@ export class MorningBriefingStack extends cdk.Stack {
     gmailFn.grantInvoke(ingestFn)
     synthesisFn.grantInvoke(ingestFn)
 
-    // ── EventBridge schedules (AEST = UTC+10, AEDT = UTC+11) ─────────────────
-    // 5:00am AEST = 19:00 UTC (standard time, Apr–Oct)
-    // 11:00pm AEST = 13:00 UTC
-    // Using fixed UTC offsets — adjust for daylight saving manually if needed.
+    // ── Schedules ─────────────────────────────────────────────────────────────
 
-    new events.Rule(this, 'MorningTrigger', {
-      ruleName: 'morning-briefing-5am',
-      description: 'Triggers ingest Lambda at 5:00am AEST',
-      schedule: events.Schedule.cron({ minute: '0', hour: '19', weekDay: '*', month: '*', year: '*' }),
-      targets: [new targets.LambdaFunction(ingestFn)],
+    // Morning trigger — EventBridge Scheduler with Australia/Sydney timezone
+    // handles AEST/AEDT (daylight saving) automatically. No manual UTC adjustments needed.
+    const schedulerRole = new iam.Role(this, 'SchedulerInvokeRole', {
+      assumedBy: new iam.ServicePrincipal('scheduler.amazonaws.com'),
+    })
+    ingestFn.grantInvoke(schedulerRole)
+    newsFn.grantInvoke(schedulerRole)
+
+    new scheduler.CfnSchedule(this, 'MorningTrigger', {
+      name: 'morning-briefing-7am',
+      description: 'Triggers ingest Lambda at 7:00am Sydney time (timezone-aware, handles DST)',
+      scheduleExpression: 'cron(0 7 * * ? *)',
+      scheduleExpressionTimezone: 'Australia/Sydney',
+      flexibleTimeWindow: { mode: 'OFF' },
+      target: {
+        arn: ingestFn.functionArn,
+        roleArn: schedulerRole.roleArn,
+      },
     })
 
-    new events.Rule(this, 'NewsBatchTrigger', {
-      ruleName: 'morning-briefing-news-11pm',
-      description: 'Triggers Daily 5 news batch Lambda at 11:00pm AEST',
-      schedule: events.Schedule.cron({ minute: '0', hour: '13', weekDay: '*', month: '*', year: '*' }),
-      targets: [new targets.LambdaFunction(newsFn)],
+    new scheduler.CfnSchedule(this, 'NewsBatchTrigger', {
+      name: 'morning-briefing-news-11pm',
+      description: 'Triggers news Lambda at 11:00pm Sydney time (timezone-aware, handles DST)',
+      scheduleExpression: 'cron(0 23 * * ? *)',
+      scheduleExpressionTimezone: 'Australia/Sydney',
+      flexibleTimeWindow: { mode: 'OFF' },
+      target: {
+        arn: newsFn.functionArn,
+        roleArn: schedulerRole.roleArn,
+      },
     })
 
     // ── API Gateway — approval/reject endpoints ───────────────────────────────

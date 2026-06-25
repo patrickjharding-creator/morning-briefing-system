@@ -3,12 +3,14 @@ import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb'
+import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda'
 import { randomUUID } from 'crypto'
 import type { BriefingData, DraftCorrespondence, ClassifiedThread } from '@morning-briefing/shared'
 
 const s3 = new S3Client({ region: process.env.AWS_REGION ?? 'ap-southeast-2' })
 const sm = new SecretsManagerClient({ region: process.env.AWS_REGION ?? 'ap-southeast-2' })
 const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient({ region: process.env.AWS_REGION ?? 'ap-southeast-2' }))
+const lambdaClient = new LambdaClient({ region: process.env.AWS_REGION ?? 'ap-southeast-2' })
 
 const BUCKET = process.env.S3_BUCKET!
 const DRAFTS_TABLE = process.env.DRAFTS_TABLE ?? 'morning-briefing-drafts'
@@ -64,8 +66,8 @@ async function generateSuggestedActions(
   const text = response.content.find(b => b.type === 'text')?.text ?? ''
   return text
     .split('\n')
-    .map(l => l.replace(/^[-•*\d.]\s*/, '').trim())
-    .filter(l => l.length > 0)
+    .map(l => l.replace(/^\d+[.)]\s+/, '').replace(/^[-•*]+\s*/, '').trim())
+    .filter(l => l.length > 10 && !l.startsWith('*') && !l.startsWith('#') && !l.toLowerCase().includes("today's suggested actions") && !l.toLowerCase().startsWith("here are"))
     .slice(0, 5)
 }
 
@@ -152,10 +154,12 @@ Respond with JSON only:
     }],
   })
 
-  const text = response.content.find(b => b.type === 'text')?.text ?? '{}'
+  const raw = response.content.find(b => b.type === 'text')?.text ?? ''
+  const match = raw.match(/\{[\s\S]*\}/)
   try {
-    return JSON.parse(text) as BriefingData['philosopher']
+    return JSON.parse(match?.[0] ?? '{}') as BriefingData['philosopher']
   } catch {
+    console.error('Philosopher JSON parse failed:', raw)
     return null
   }
 }
@@ -220,7 +224,10 @@ async function generateOpeningLine(
 
 export async function handler(): Promise<void> {
   const today = new Date()
-  const dateStr = today.toISOString().slice(0, 10)
+  // Use Sydney local date — Lambda runs at 7am Sydney = 9pm UTC previous day
+  const dateStr = today.toLocaleDateString('en-CA')
+  // News Lambda runs at 11pm Sydney (= 1pm UTC same day) — uses UTC date for its S3 key
+  const newsDateStr = today.toISOString().slice(0, 10)
 
   console.log(`Synthesis Lambda running for ${dateStr}`)
 
@@ -231,7 +238,7 @@ export async function handler(): Promise<void> {
   const [ingestData, gmailThreads, newsBullets] = await Promise.all([
     getS3Json<Partial<BriefingData>>(`ingest/${dateStr}.json`),
     getS3Json<ClassifiedThread[]>(`gmail/${dateStr}.json`).catch(() => [] as ClassifiedThread[]),
-    getS3Json<BriefingData['news']>(`news/${dateStr}.json`).catch(() => [] as BriefingData['news']),
+    getS3Json<BriefingData['news']>(`news/${newsDateStr}.json`).catch(() => [] as BriefingData['news']),
   ])
 
   // Run Sonnet + Haiku tasks — suggested actions and drafts can run in parallel
@@ -282,4 +289,18 @@ export async function handler(): Promise<void> {
   }))
 
   console.log(`Synthesis complete — written to s3://${BUCKET}/briefing/${dateStr}.json`)
+
+  // ── Invoke Email Builder Lambda ───────────────────────────────────────────
+
+  const emailBuilderArn = process.env.EMAIL_BUILDER_ARN!
+  console.log('Invoking Email Builder Lambda...')
+  const emailResult = await lambdaClient.send(new InvokeCommand({
+    FunctionName: emailBuilderArn,
+    InvocationType: 'RequestResponse',
+  }))
+  if (emailResult.FunctionError) {
+    const errPayload = emailResult.Payload ? Buffer.from(emailResult.Payload).toString() : 'unknown'
+    throw new Error(`Email Builder Lambda failed: ${errPayload}`)
+  }
+  console.log('Email Builder Lambda completed — briefing sent')
 }

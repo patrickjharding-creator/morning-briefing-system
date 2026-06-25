@@ -46,7 +46,7 @@ export function parseFitnessPlan(
   const plan = yaml.load(yamlContent) as FitnessPlan
 
   const todayName = DAYS[today.getDay()]
-  const todayStr = today.toISOString().slice(0, 10)
+  const todayStr = today.toLocaleDateString('en-CA')
 
   // Find the week that contains today
   let plannedSession: PlannedSession | null = null
@@ -62,7 +62,7 @@ export function parseFitnessPlan(
     if (todayDate >= weekStart && todayDate <= weekEnd) {
       const sessionDef = week.sessions[todayName]
 
-      if (sessionDef && sessionDef !== 'rest' && typeof sessionDef === 'object') {
+      if (sessionDef && sessionDef !== 'rest' && typeof sessionDef === 'object' && sessionDef.discipline !== 'rest') {
         plannedSession = {
           discipline: sessionDef.discipline,
           type: sessionDef.type,
@@ -76,7 +76,7 @@ export function parseFitnessPlan(
 
       // Count non-rest sessions in this week for the planned tally
       weeklyPlannedCount = Object.values(week.sessions).filter(
-        s => s !== 'rest' && typeof s === 'object'
+        s => s !== 'rest' && typeof s === 'object' && (s as SessionDef).discipline !== 'rest'
       ).length
     }
   }

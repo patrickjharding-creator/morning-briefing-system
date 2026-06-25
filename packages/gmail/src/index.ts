@@ -22,7 +22,8 @@ async function getS3Text(key: string): Promise<string> {
 
 export async function handler(): Promise<void> {
   const today = new Date()
-  const dateStr = today.toISOString().slice(0, 10)
+  // Use Sydney local date — Lambda runs at 7am Sydney = 9pm UTC previous day
+  const dateStr = today.toLocaleDateString('en-CA')
 
   console.log(`Gmail Lambda running for ${dateStr}`)
 
@@ -39,7 +40,7 @@ export async function handler(): Promise<void> {
   }
 
   const briefingConfig = JSON.parse(briefingConfigRaw) as {
-    messaging: { filters: { exclude_automated: boolean; exclude_group_chats: boolean; min_message_length: number; lookback_hours: number } }
+    messaging: { filters: { exclude_automated: boolean; exclude_group_chats: boolean; min_message_length: number; lookback_hours: number; inbox_scan_days: number } }
   }
 
   const client = new Anthropic({ apiKey: anthropicKey })

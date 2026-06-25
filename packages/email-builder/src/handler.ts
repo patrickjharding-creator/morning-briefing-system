@@ -13,7 +13,8 @@ const APPROVAL_API_URL = process.env.APPROVAL_API_URL ?? ''
 
 export async function handler(): Promise<void> {
   const today = new Date()
-  const dateStr = today.toISOString().slice(0, 10)
+  // Use Sydney local date — Lambda runs at 7am Sydney = 9pm UTC previous day
+  const dateStr = today.toLocaleDateString('en-CA')
 
   console.log(`Email Builder Lambda running for ${dateStr}`)
 
