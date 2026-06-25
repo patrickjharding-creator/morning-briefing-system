@@ -44,11 +44,14 @@ function buildAdvisory(
 ): string | null {
   const flags: string[] = []
 
+  const todayStart = new Date(now)
+  todayStart.setHours(0, 0, 0, 0)
+  const tomorrowStart = new Date(todayStart)
+  tomorrowStart.setDate(todayStart.getDate() + 1)
+
   const windowItems = items.filter(item => {
     const dt = new Date(item.dt * 1000)
-    const sameDay =
-      dt.getDate() === now.getDate() &&
-      dt.getMonth() === now.getMonth()
+    const sameDay = dt >= todayStart && dt < tomorrowStart
     return sameDay && isInWindow(dt, rules.training_window_start, rules.training_window_end)
   })
 
@@ -74,14 +77,23 @@ export async function fetchWeather(apiKey: string, config: Config): Promise<Weat
   const tonightItems: OWMForecastItem[] = []
   const tomorrowItems: OWMForecastItem[] = []
 
+  const todayStart = new Date(now)
+  todayStart.setHours(0, 0, 0, 0)
+  const tomorrowStart = new Date(todayStart)
+  tomorrowStart.setDate(todayStart.getDate() + 1)
+  const dayAfterStart = new Date(tomorrowStart)
+  dayAfterStart.setDate(tomorrowStart.getDate() + 1)
+
   for (const item of data.list) {
     const dt = new Date(item.dt * 1000)
-    const dayOffset = dt.getDate() - now.getDate()
     const hour = dt.getHours()
 
-    if (dayOffset === 0 && hour < 18) todayItems.push(item)
-    else if (dayOffset === 0 && hour >= 18) tonightItems.push(item)
-    else if (dayOffset === 1) tomorrowItems.push(item)
+    if (dt >= todayStart && dt < tomorrowStart) {
+      if (hour < 18) todayItems.push(item)
+      else tonightItems.push(item)
+    } else if (dt >= tomorrowStart && dt < dayAfterStart) {
+      tomorrowItems.push(item)
+    }
   }
 
   function summarisePeriod(items: OWMForecastItem[], label: string): WeatherPeriod {
