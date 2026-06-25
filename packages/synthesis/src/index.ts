@@ -59,7 +59,7 @@ async function generateSuggestedActions(
     system: [{ type: 'text', text: SONNET_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
     messages: [{
       role: 'user',
-      content: `Based on these email summaries, list the suggested actions Pat should take today. Be specific. One action per line, starting with a verb. Max 5 actions.\n\n${threadSummaries}`,
+      content: `Based on these email summaries, list the suggested actions Pat should take today. Output only the action items — no preamble, no intro sentence, no headers. One action per line, starting with a verb. Max 5 actions.\n\n${threadSummaries}`,
     }],
   })
 
@@ -67,7 +67,7 @@ async function generateSuggestedActions(
   return text
     .split('\n')
     .map(l => l.replace(/^\d+[.)]\s+/, '').replace(/^[-•*]+\s*/, '').trim())
-    .filter(l => l.length > 10 && !l.startsWith('*') && !l.startsWith('#') && !l.toLowerCase().includes("today's suggested actions") && !l.toLowerCase().startsWith("here are"))
+    .filter(l => l.length > 10 && /^[A-Z]/.test(l))
     .slice(0, 5)
 }
 
