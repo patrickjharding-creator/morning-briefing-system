@@ -227,7 +227,7 @@ function renderFitness(data: BriefingData['fitness']): string {
     ].filter(Boolean).join(' · ')
 
     parts.push(`<div class="session">
-      <div class="session-type">${esc(planned_session.discipline)} · ${esc(planned_session.type.replace(/_/g, ' '))}${detail ? ` · ${detail}` : ''}</div>
+      <div class="session-type">${esc(planned_session.discipline)}${planned_session.type ? ` · ${esc(planned_session.type.replace(/_/g, ' '))}` : ''}${detail ? ` · ${detail}` : ''}</div>
       <div class="session-notes">${esc(planned_session.notes)}</div>
     </div>`)
   } else {
