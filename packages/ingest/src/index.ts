@@ -2,6 +2,7 @@ import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager'
 import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda'
 import type { BriefingData } from '@morning-briefing/shared'
+import yaml from 'js-yaml'
 import { fetchWeather } from './weather'
 import { fetchCalendarData } from './calendar'
 import { fetchGarminData } from './garmin'
@@ -58,7 +59,7 @@ export async function handler(event: IngestEvent = {}): Promise<void> {
 
   const [briefingConfigRaw, parentingScheduleRaw, fitnessPlanRaw] = await Promise.all([
     getS3Text('personal-config/briefing-config.json'),
-    getS3Text('personal-config/parenting-schedule.json'),
+    getS3Text('personal-config/parenting-schedule.yaml'),
     getS3Text('personal-config/fitness-plan.yaml'),
   ])
 
@@ -70,7 +71,7 @@ export async function handler(event: IngestEvent = {}): Promise<void> {
     smart_dates: { birthday_advance_warning_days: number; race_warning_weeks: number[]; plan_expiry_warning_days: number }
   }
 
-  const parentingSchedule = JSON.parse(parentingScheduleRaw)
+  const parentingSchedule = yaml.load(parentingScheduleRaw)
 
   // ── Fetch all data sources in parallel ───────────────────────────────────
 

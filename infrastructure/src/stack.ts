@@ -97,7 +97,13 @@ export class MorningBriefingStack extends cdk.Stack {
       timeout: cdk.Duration.minutes(15),  // Batch API polling
     })
 
-    const emailBuilderFn = makeLambda('EmailBuilderLambda', 'email-builder', 'handler.ts')
+    const emailBuilderFn = makeLambda('EmailBuilderLambda', 'email-builder', 'handler.ts', {
+      environment: {
+        ...sharedEnv,
+        FROM_ADDRESS: 'patrick.j.harding@gmail.com',
+        TO_ADDRESS: 'patrick.j.harding@gmail.com',
+      },
+    })
 
     const approvalFn = makeLambda('ApprovalLambda', 'approval-api', 'index.ts', {
       timeout: cdk.Duration.seconds(30),

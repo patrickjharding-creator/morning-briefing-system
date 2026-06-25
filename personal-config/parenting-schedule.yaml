@@ -1,0 +1,157 @@
+# =============================================================================
+# PARENTING SCHEDULE
+# =============================================================================
+#
+# Edit this file to reflect your actual custody / care arrangement.
+# Upload it to S3 after saving:
+#
+#   AWS_PROFILE=morning-briefing aws s3 cp \
+#     personal-config/parenting-schedule.yaml \
+#     s3://morning-briefing-646167485477/personal-config/parenting-schedule.yaml
+#
+# Values for each period: pat | pam | sophie
+#
+# QUICK REFERENCE — who has the kids:
+#
+#              MON        TUE        WED        THU        FRI        SAT        SUN
+# morning:     pam        pam        pat        pat        pam        pam        pat
+# afternoon:   sophie     pat        pam        pat        pam        pat        pat
+# evening:     pat        pat        pam        pat        pam        pat        pam
+# night:       pat        pam        pat        pam        pam        pat        pam
+#
+# =============================================================================
+
+children:
+  - name: Penny
+    age: 5
+    type: school        # attends school on weekdays during term
+
+  - name: Philippa
+    age: 1
+    type: daycare       # attends daycare on weekdays
+
+parties:
+  pat:
+    display_name: Pat
+
+  pam:
+    display_name: Pam
+
+  sophie:
+    display_name: Sophie
+    role: babysitter
+    arrives: "16:00"    # Sophie arrives at 4:00pm
+    days: [monday]
+    duties:
+      - pickup_penny
+      - pickup_philippa
+      - dog_walk
+      - dog_feeding
+      - philippa_dinner
+
+# Time windows and what needs to happen in each
+periods:
+  morning:
+    time_start: "06:00"
+    time_end:   "08:30"
+    duties:
+      - breakfast           # both kids
+      - drop_off            # Penny to school, Philippa to daycare (school days only)
+      - pack_lunch          # school days only
+
+  afternoon:
+    time_start: "16:30"
+    time_end:   "18:30"
+    duties:
+      - pick_up             # Penny from school, Philippa from daycare
+      - supervision
+      - dinner
+      - dishes
+
+  evening:
+    time_start: "18:30"
+    time_end:   "20:30"
+    duties:
+      - bath
+      - bedtime
+
+  night:
+    time_start: "21:30"
+    time_end:   "06:00"
+    duties:
+      - settle              # overnight settling if needed
+
+# Weekly schedule — who is responsible for each period
+weekly_pattern:
+  monday:
+    morning:   pam
+    afternoon: sophie       # Sophie covers Mon afternoon (arrives 4pm, see above)
+    evening:   pat
+    night:     pat
+
+  tuesday:
+    morning:   pam
+    afternoon: pat
+    evening:   pat
+    night:     pam
+
+  wednesday:
+    morning:   pat
+    afternoon: pam
+    evening:   pam
+    night:     pat
+
+  thursday:
+    morning:   pat
+    afternoon: pat
+    evening:   pat
+    night:     pam
+
+  friday:
+    morning:   pam
+    afternoon: pam
+    evening:   pam
+    night:     pam
+
+  saturday:
+    morning:   pam
+    afternoon: pat
+    evening:   pat
+    night:     pat
+
+  sunday:
+    morning:   pat
+    afternoon: pat
+    evening:   pam
+    night:     pam
+
+# One-off exceptions — override the weekly pattern for a specific date
+exceptions: []
+  # Example:
+  # - date: "2026-07-10"
+  #   overrides:
+  #     morning: pam
+  #     afternoon: pat
+  #   note: "Pat away — Pam covers morning"
+
+# School holiday periods (drop-offs removed from duties on these dates)
+school_holidays:
+  - start: "2026-01-01"
+    end:   "2026-01-26"
+    note:  "Summer holidays — before Term 1"
+
+  - start: "2026-04-03"
+    end:   "2026-04-19"
+    note:  "Autumn holidays — between Terms 1 and 2"
+
+  - start: "2026-07-04"
+    end:   "2026-07-19"
+    note:  "Winter holidays — between Terms 2 and 3"
+
+  - start: "2026-09-26"
+    end:   "2026-10-11"
+    note:  "Spring holidays — between Terms 3 and 4"
+
+  - start: "2026-12-18"
+    end:   "2026-12-31"
+    note:  "Summer holidays — after Term 4"
